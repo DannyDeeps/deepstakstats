@@ -2,7 +2,7 @@ const axios = require('axios');
 
 axios.get('https://ptero.deepstak.uk/api/application/servers', {
   headers: {
-    Authorization: 'Bearer {{PTER_API_KEY}}'
+    Authorization: 'Bearer ' + process.env.PTER_API_KEY
   }
 })
 .then(function (response) {
