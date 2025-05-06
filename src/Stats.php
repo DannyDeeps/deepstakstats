@@ -12,7 +12,7 @@ final class Stats {
 
     $servers = [];
     foreach ($serverList['data'] as $server) {
-      if (20 === $server['attributes']['egg']) continue;
+      if (in_array($server['attributes']['egg'], [19, 20])) continue;
 
       $response = $guzzle->get("/api/client/servers/{$server['attributes']['identifier']}/resources", ['headers' => ['Authorization' => 'Bearer ' . $_ENV['CLIENT_API_KEY']]]);
       $resourceData = json_decode((string) $response->getBody(), true);
