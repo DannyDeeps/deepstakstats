@@ -154,11 +154,20 @@ final class Bot {
 
     $password = $password ?? 'No Password';
 
+    $statusColor = match ($_['current_state']) {
+       'running' => 0x00FF00,
+       'offline' => 0xFF0000,
+       'starting' => 0xFFFF00,
+       'reinstalling',
+       'installing' => 0xFFA500,
+       default => 0x808080
+    };
+
     $embed = new Embed($discord);
     $embed
       ->setTitle($_['name'])
       ->setAuthor($game ?? '')
-      ->setColor(0x00FF00)
+      ->setColor($statusColor)
       ->setDescription($_['description'])
       ->addFieldValues('Server', "```https://deepstak.uk:$port```", true)
       ->addFieldValues('CPU', "```$cpuPrcnt/$cpuLimit```", true)
