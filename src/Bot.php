@@ -10,8 +10,10 @@ use \Discord\Builders\MessageBuilder;
 use \GuzzleHttp\Client;
 
 final class Bot {
-  private string $cacheFile = CACHE_DIR . '/servers.json';
-  private array $serverInfoCache = [];
+  private string $serverCacheFile = CACHE_DIR . '/servers.json';
+  private array $serverCache = [];
+  private string $usageCacheFile = CACHE_DIR . '/usage.txt';
+  private string $usageMessageId = '';
   private Client $guzzle;
 
   public function start(): void {
@@ -28,10 +30,13 @@ final class Bot {
       if (!$channel) {
         $discord->getLogger()->error('[DeepstakStats] Channel not found.');
       } else {
+        $this->loadServerCache();
+        $this->loadUsageCache();
+
         $this->guzzle = new Client(['base_uri' => 'https://ptero.deepstak.uk']);
 
         $discord->getLoop()->addPeriodicTimer(15, function () use ($discord, $channel) {
-          $this->loadCache();
+          $this->refreshServerUsageInfo($discord, $channel);
           $this->refreshServerInfo($discord, $channel);
         });
       }
@@ -40,27 +45,37 @@ final class Bot {
     $discord->run();
   }
 
-  private function loadCache(): void {
-    if (file_exists($this->cacheFile)) {
-      $this->serverInfoCache = json_decode(file_get_contents($this->cacheFile), true) ?? [];
+  private function loadServerCache(): void {
+    if (file_exists($this->serverCacheFile)) {
+      $this->serverCache = json_decode(file_get_contents($this->serverCacheFile), true) ?? [];
     }
   }
 
-  private function saveCache(): void {
-    file_put_contents($this->cacheFile, json_encode($this->serverInfoCache, JSON_PRETTY_PRINT));
+  private function saveServerCache(): void {
+    file_put_contents($this->serverCacheFile, json_encode($this->serverCache, JSON_PRETTY_PRINT));
+  }
+
+  private function loadUsageCache(): void {
+    if (file_exists($this->usageCacheFile)) {
+      $this->usageMessageId = file_get_contents($this->usageCacheFile) ?? '';
+    }
+  }
+
+  private function saveUsageCache(): void {
+    file_put_contents($this->usageCacheFile, $this->usageMessageId);
   }
 
   private function sendServerInfo(Discord $discord, Channel $channel, array $attributes, string $serverId, string $hash): void {
     $embed = $this->buildServerInfo($discord, $attributes);
 
     $channel->sendMessage(MessageBuilder::new()->addEmbed($embed))->then(
-      function ($message) use ($discord, $serverId, $hash, $attributes) {
-        $this->serverInfoCache[$serverId] = [
+      function ($message) use ($serverId, $hash, $attributes) {
+        $this->serverCache[$serverId] = [
           'message_id' => $message->id,
           'hash' => $hash,
           'attributes' => $attributes
         ];
-        $this->saveCache();
+        $this->saveServerCache();
       }
     );
   }
@@ -69,34 +84,34 @@ final class Bot {
     $embed = $this->buildServerInfo($discord, $attributes);
 
     $channel->messages->fetch($messageId)->then(
-      function (Message $message) use ($discord, $embed, $serverId, $hash, $attributes) {
+      function (Message $message) use ($embed, $serverId, $hash, $attributes) {
         $message->edit(MessageBuilder::new()->addEmbed($embed));
-        $this->serverInfoCache[$serverId] = [
+        $this->serverCache[$serverId] = [
           'message_id' => $message->id,
           'hash' => $hash,
           'attributes' => $attributes,
         ];
-        $this->saveCache();
+        $this->saveServerCache();
       },
-      function () use ($discord, $messageId, $serverId) {
-        unset($this->serverInfoCache[$serverId]);
-        $this->saveCache();
+      function () use ($serverId) {
+        unset($this->serverCache[$serverId]);
+        $this->saveServerCache();
       }
     );
   }
 
   private function deleteServerInfo(Channel $channel, string $serverId): void {
-    $messageId = $this->serverInfoCache[$serverId]['message_id'];
+    $messageId = $this->serverCache[$serverId]['message_id'];
 
     $channel->messages->fetch($messageId)->then(
       function (Message $message) use ($serverId) {
         $message->delete();
-        unset($this->serverInfoCache[$serverId]);
-        $this->saveCache();
+        unset($this->serverCache[$serverId]);
+        $this->saveServerCache();
       },
       function () use ($serverId) {
-        unset($this->serverInfoCache[$serverId]);
-        $this->saveCache();
+        unset($this->serverCache[$serverId]);
+        $this->saveServerCache();
       }
     );
   }
@@ -104,32 +119,16 @@ final class Bot {
   private function buildServerInfo(Discord $discord, array $attributes): Embed {
     $_ = $attributes;
 
-    $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
-
-    $memMb = round($_['usage']['memory_bytes'] / 1000000) . 'MB';
-    $memLimit = $_['limits']['memory'] ? $_['limits']['memory'] . 'MB' : 'Unlimited';
-
-    $cpuPrcnt = $_['usage']['cpu_absolute'] . '%';
-    $cpuLimit = $_['limits']['cpu'] ? $_['limits']['cpu'] . '%' : 'Unlimited';
-
-    // $diskMb = round($_['usage']['disk_bytes'] / 1000000) . 'MB';
-    // $diskLimit = $_['limits']['disk'] ? $_['limits']['disk'] . 'MB' : 'Unlimited';
-
-    $game = '';
-
     switch ($_['identifier']) {
       case 'e6e4eebe': // V Rising
-        $description = $_['environment']['VR_DESCRIPTION'];
         $game = 'V Rising';
         $password = $_['environment']['VR_PASSWORD'];
-        // $image = 'https://media.discordapp.net/attachments/735531477361623070/1369385470542479370/v-rising1.png?ex=681bab1a&is=681a599a&hm=59cde2df7831693a679958fb73caf50a992b17ce77f021caa1056d60d1aefbb6&=&format=webp&quality=lossless';
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1604030/123091b358ac705c36642df5599d230825ad3cd6/header.jpg?t=1745842815';
         break;
 
       case '1cee825e': // Enshrouded
         $game = 'Enshrouded';
         $password = $_['environment']['SRV_PW2'];
-        // $image = 'https://cdn.discordapp.com/attachments/735531477361623070/1369388511962071070/image.png?ex=681badef&is=681a5c6f&hm=f6060879712cb8e285f9b1edff9339dd3d343ba52218e015d54c1f7976908e88&';
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1203620/header.jpg?t=1744617436';
         break;
 
@@ -145,18 +144,27 @@ final class Bot {
         break;
     }
 
+    $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
+
+    $cpuPrcnt = number_format(round($_['usage']['cpu_absolute'] ?? 0, 2), 2);
+    $cpuLimit = $_['limits']['cpu'] ? $_['limits']['cpu'] . '%' : 'Unlimited';
+
+    $memGb = round($_['usage']['memory_bytes'] / 1073741824, 2);
+    $memGbLimit = $_['limits']['memory'] ? round($_['limits']['memory'] / 1024, 2) . ' GB' : 'Unlimited';
+
+    $password = $password ?? 'No Password';
+
     $embed = new Embed($discord);
     $embed
       ->setTitle($_['name'])
-      ->setAuthor($game)
+      ->setAuthor($game ?? '')
       ->setColor(0x00FF00)
-      ->setDescription($description ?? $_['description'])
-      ->addFieldValues('<:rickandmortyportal:735198191414411445> Server', "https://deepstak.uk:$port", true)
-      ->addFieldValues('<:portalgun:735198189790953472> Password', $password ?? 'No password', true)
+      ->setDescription($_['description'])
+      ->addFieldValues('Server', "```https://deepstak.uk:$port```", true)
+      ->addFieldValues('CPU', "```$cpuPrcnt/$cpuLimit```", true)
       ->addFieldValues('', '', false)
-      ->addFieldValues('CPU', "$cpuPrcnt / $cpuLimit", true)
-      ->addFieldValues('RAM', "$memMb / $memLimit", true);
-      // ->addFieldValues('Disk', "$diskMb / $diskLimit", true);
+      ->addFieldValues('Password', "```$password```", true)
+      ->addFieldValues('RAM', "```$memGb/$memGbLimit```", true);
 
     if (isset($image)) {
       $embed->setImage($image);
@@ -173,8 +181,8 @@ final class Bot {
       $id = $attributes['identifier'];
       $hash = md5(json_encode($attributes));
 
-      if (isset($this->serverInfoCache[$id])) {
-        $cache = $this->serverInfoCache[$id];
+      if (isset($this->serverCache[$id])) {
+        $cache = $this->serverCache[$id];
 
         if ($cache['hash'] !== $hash) {
           $this->editServerInfo($discord, $channel, $cache['message_id'], $attributes, $id, $hash);
@@ -185,10 +193,38 @@ final class Bot {
     }
 
     $existingIds = array_map(fn($item) => $item['attributes']['identifier'] ?? null, $servers);
-    foreach (array_keys($this->serverInfoCache) as $cachedId) {
+    foreach (array_keys($this->serverCache) as $cachedId) {
       if (!in_array($cachedId, $existingIds)) {
         $this->deleteServerInfo($channel, $cachedId);
       }
     }
+  }
+
+  private function refreshServerUsageInfo(Discord $discord, Channel $channel): void {
+    $cpuLoad = Stats::getCpuLoad();
+    $memUsage = Stats::getMemoryUsage();
+    $diskUsage = Stats::getDiskUsage();
+
+    $embed = new Embed($discord);
+    $embed
+      ->setTitle('Deepstak Overall Usage')
+      ->setColor(0x800080)
+      ->addFieldValues('CPU', "```$cpuLoad%```", true)
+      ->addFieldValues("RAM", "```{$memUsage['used_gb']}/{$memUsage['total_gb']} GB ({$memUsage['percent_used']}%)```", true)
+      ->addFieldValues("DISK", "```{$diskUsage['used_gb']}/{$diskUsage['total_gb']} GB ({$diskUsage['percent_used']}%)```", true);
+
+    $channel->messages->fetch($this->usageMessageId ?? '')->then(
+      function (Message $message) use ($embed) {
+        $message->edit(MessageBuilder::new()->addEmbed($embed));
+      },
+      function () use ($channel, $embed) {
+        $channel->sendMessage(MessageBuilder::new()->addEmbed($embed))->then(
+          function ($message) {
+            $this->usageMessageId = $message->id;
+            $this->saveUsageCache();
+          }
+        );
+      }
+    );
   }
 }
