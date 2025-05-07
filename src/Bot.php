@@ -142,6 +142,12 @@ final class Bot {
         $game = 'All The Mods 10 (Minecraft)';
         $image = 'https://i.imgur.com/QAUei6a_d.webp?maxwidth=760&fidelity=grand';
         break;
+
+      case 'a4e4837d': // Arma 3
+        $game = 'Arma 3';
+        $password = $_['environment']['SERVER_PASSWORD'];
+        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/107410/header.jpg?t=1743497752';
+        break;
     }
 
     $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
