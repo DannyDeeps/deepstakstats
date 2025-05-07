@@ -151,7 +151,7 @@ final class Bot {
 
       case '745f58e7': // Core Keeper
         $game = 'Core Keeper';
-        $password = $_['environment']['GAME_ID'];
+        $server = $_['environment']['GAME_ID'];
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1621690/header.jpg?t=1741883937';
         break;
     }
@@ -164,6 +164,7 @@ final class Bot {
     $memGb = round($_['usage']['memory_bytes'] / 1073741824, 2);
     $memGbLimit = $_['limits']['memory'] ? round($_['limits']['memory'] / 1024, 2) . ' GB' : 'Unlimited';
 
+    $server = $server ?? "https://deepstak.uk:$port";
     $password = $password ?? 'No Password';
 
     $statusColor = match ($_['current_state']) {
@@ -181,7 +182,7 @@ final class Bot {
       ->setAuthor($game ?? '')
       ->setColor($statusColor)
       ->setDescription($_['description'])
-      ->addFieldValues('Server', "```https://deepstak.uk:$port```", true)
+      ->addFieldValues('Server', "```$server```", true)
       ->addFieldValues('CPU', "```$cpuPrcnt/$cpuLimit```", true)
       ->addFieldValues('', '', false)
       ->addFieldValues('Password', "```$password```", true)
