@@ -151,7 +151,7 @@ final class Bot {
 
       case '745f58e7': // Core Keeper
         $game = 'Core Keeper';
-        // $password = $_['environment']['SERVER_PASSWORD'];
+        $password = $_['environment']['GAME_ID'];
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1621690/header.jpg?t=1741883937';
         break;
     }
