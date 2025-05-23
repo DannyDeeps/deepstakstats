@@ -154,6 +154,11 @@ final class Bot {
         $server = $_['environment']['GAME_ID'];
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1621690/header.jpg?t=1741883937';
         break;
+
+      case 'b3fa0915': // Project Zomboid
+        $game = 'Project Zomboid';
+        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/108600/header.jpg?t=1739309087';
+        break;
     }
 
     $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
