@@ -14,6 +14,8 @@ final class Bot {
   private array $serverCache = [];
   private string $usageCacheFile = CACHE_DIR . '/usage.txt';
   private string $usageMessageId = '';
+  private string $infoMessageCacheFile = CACHE_DIR . '/infoMessage.txt';
+  private string $infoMessageId = '';
   private Client $guzzle;
 
   public function start(): void {
@@ -30,14 +32,12 @@ final class Bot {
       if (!$channel) {
         $discord->getLogger()->error('[DeepstakStats] Channel not found.');
       } else {
-        $this->loadServerCache();
-        $this->loadUsageCache();
+        $this->loadInfoMessageCache();
 
         $this->guzzle = new Client(['base_uri' => 'https://ptero.deepstak.uk']);
 
-        $discord->getLoop()->addPeriodicTimer(15, function () use ($discord, $channel) {
-          $this->refreshServerUsageInfo($discord, $channel);
-          $this->refreshServerInfo($discord, $channel);
+        $discord->getLoop()->addPeriodicTimer(30, function () use ($discord, $channel) {
+          $this->updateInfoMessage($discord, $channel);
         });
       }
     });
@@ -45,75 +45,54 @@ final class Bot {
     $discord->run();
   }
 
-  private function loadServerCache(): void {
-    if (file_exists($this->serverCacheFile)) {
-      $this->serverCache = json_decode(file_get_contents($this->serverCacheFile), true) ?? [];
+  private function updateInfoMessage(Discord $discord, Channel $channel): void {
+    $embeds = [];
+
+    $cpuLoad = Stats::getCpuLoad();
+    $memUsage = Stats::getMemoryUsage();
+    $diskUsage = Stats::getDiskUsage();
+
+    $embed = new Embed($discord);
+    $embed
+      ->setTitle('Deepstak Overall Usage')
+      ->setColor(0x800080)
+      ->addFieldValues('CPU', "```$cpuLoad%```", true)
+      ->addFieldValues("RAM", "```{$memUsage['used_gb']}/{$memUsage['total_gb']} GB ({$memUsage['percent_used']}%)```", true)
+      ->addFieldValues("DISK", "```{$diskUsage['used_gb']}/{$diskUsage['total_gb']} GB ({$diskUsage['percent_used']}%)```", true);
+
+    $embeds[] = $embed;
+
+    $servers = Stats::getServerList($this->guzzle, $discord->getLogger());
+    foreach ($servers as $server) {
+      $embeds[] = $this->buildServerInfo($discord, $server['attributes']);
+    }
+
+    $infoMessage = MessageBuilder::new();
+    $infoMessage->addEmbed(...$embeds);
+
+    $channel->messages->fetch($this->infoMessageId)->then(
+      function (Message $message) use ($infoMessage) {
+        $message->edit($infoMessage);
+      },
+      function () use ($channel, $infoMessage) {
+        $channel->sendMessage($infoMessage)->then(
+          function (Message $message) {
+            $this->infoMessageId = $message->id;
+            $this->saveInfoMessageCache();
+          }
+        );
+      }
+    );
+  }
+
+  private function loadInfoMessageCache(): void {
+    if (file_exists($this->infoMessageCacheFile)) {
+      $this->infoMessageId = file_get_contents($this->infoMessageCacheFile) ?? '';
     }
   }
 
-  private function saveServerCache(): void {
-    file_put_contents($this->serverCacheFile, json_encode($this->serverCache, JSON_PRETTY_PRINT));
-  }
-
-  private function loadUsageCache(): void {
-    if (file_exists($this->usageCacheFile)) {
-      $this->usageMessageId = file_get_contents($this->usageCacheFile) ?? '';
-    }
-  }
-
-  private function saveUsageCache(): void {
+  private function saveInfoMessageCache(): void {
     file_put_contents($this->usageCacheFile, $this->usageMessageId);
-  }
-
-  private function sendServerInfo(Discord $discord, Channel $channel, array $attributes, string $serverId, string $hash): void {
-    $embed = $this->buildServerInfo($discord, $attributes);
-
-    $channel->sendMessage(MessageBuilder::new()->addEmbed($embed))->then(
-      function ($message) use ($serverId, $hash, $attributes) {
-        $this->serverCache[$serverId] = [
-          'message_id' => $message->id,
-          'hash' => $hash,
-          'attributes' => $attributes
-        ];
-        $this->saveServerCache();
-      }
-    );
-  }
-
-  private function editServerInfo(Discord $discord, Channel $channel, string $messageId, array $attributes, string $serverId, string $hash): void {
-    $embed = $this->buildServerInfo($discord, $attributes);
-
-    $channel->messages->fetch($messageId)->then(
-      function (Message $message) use ($embed, $serverId, $hash, $attributes) {
-        $message->edit(MessageBuilder::new()->addEmbed($embed));
-        $this->serverCache[$serverId] = [
-          'message_id' => $message->id,
-          'hash' => $hash,
-          'attributes' => $attributes,
-        ];
-        $this->saveServerCache();
-      },
-      function () use ($serverId) {
-        unset($this->serverCache[$serverId]);
-        $this->saveServerCache();
-      }
-    );
-  }
-
-  private function deleteServerInfo(Channel $channel, string $serverId): void {
-    $messageId = $this->serverCache[$serverId]['message_id'];
-
-    $channel->messages->fetch($messageId)->then(
-      function (Message $message) use ($serverId) {
-        $message->delete();
-        unset($this->serverCache[$serverId]);
-        $this->saveServerCache();
-      },
-      function () use ($serverId) {
-        unset($this->serverCache[$serverId]);
-        $this->saveServerCache();
-      }
-    );
   }
 
   private function buildServerInfo(Discord $discord, array $attributes): Embed {
@@ -157,7 +136,7 @@ final class Bot {
 
       case 'b3fa0915': // Project Zomboid
         $game = 'Project Zomboid';
-        $server = '185.45.226.7:40011';
+        $server = '185.45.226.7' . $_['relationships']['allocations']['data'][0]['attributes']['port'];
         $password = 'daddyspiffo';
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/108600/header.jpg?t=1739309087';
         break;
@@ -175,12 +154,12 @@ final class Bot {
     $password = $password ?? 'No Password';
 
     $statusColor = match ($_['current_state']) {
-       'running' => 0x00FF00,
-       'offline' => 0xFF0000,
-       'starting' => 0xFFFF00,
-       'reinstalling',
-       'installing' => 0xFFA500,
-       default => 0x808080
+      'running' => 0x00FF00,
+      'offline' => 0xFF0000,
+      'starting' => 0xFFFF00,
+      'reinstalling',
+      'installing' => 0xFFA500,
+      default => 0x808080
     };
 
     $embed = new Embed($discord);
@@ -200,60 +179,5 @@ final class Bot {
     }
 
     return $embed;
-  }
-
-  private function refreshServerInfo(Discord $discord, Channel $channel): void {
-    $servers = Stats::getServerList($this->guzzle, $discord->getLogger());
-
-    foreach ($servers as $server) {
-      $attributes = $server['attributes'];
-      $id = $attributes['identifier'];
-      $hash = md5(json_encode($attributes));
-
-      if (isset($this->serverCache[$id])) {
-        $cache = $this->serverCache[$id];
-
-        if ($cache['hash'] !== $hash) {
-          $this->editServerInfo($discord, $channel, $cache['message_id'], $attributes, $id, $hash);
-        }
-      } else {
-        $this->sendServerInfo($discord, $channel, $attributes, $id, $hash);
-      }
-    }
-
-    $existingIds = array_map(fn($item) => $item['attributes']['identifier'] ?? null, $servers);
-    foreach (array_keys($this->serverCache) as $cachedId) {
-      if (!in_array($cachedId, $existingIds)) {
-        $this->deleteServerInfo($channel, $cachedId);
-      }
-    }
-  }
-
-  private function refreshServerUsageInfo(Discord $discord, Channel $channel): void {
-    $cpuLoad = Stats::getCpuLoad();
-    $memUsage = Stats::getMemoryUsage();
-    $diskUsage = Stats::getDiskUsage();
-
-    $embed = new Embed($discord);
-    $embed
-      ->setTitle('Deepstak Overall Usage')
-      ->setColor(0x800080)
-      ->addFieldValues('CPU', "```$cpuLoad%```", true)
-      ->addFieldValues("RAM", "```{$memUsage['used_gb']}/{$memUsage['total_gb']} GB ({$memUsage['percent_used']}%)```", true)
-      ->addFieldValues("DISK", "```{$diskUsage['used_gb']}/{$diskUsage['total_gb']} GB ({$diskUsage['percent_used']}%)```", true);
-
-    $channel->messages->fetch($this->usageMessageId ?? '')->then(
-      function (Message $message) use ($embed) {
-        $message->edit(MessageBuilder::new()->addEmbed($embed));
-      },
-      function () use ($channel, $embed) {
-        $channel->sendMessage(MessageBuilder::new()->addEmbed($embed))->then(
-          function ($message) {
-            $this->usageMessageId = $message->id;
-            $this->saveUsageCache();
-          }
-        );
-      }
-    );
   }
 }
