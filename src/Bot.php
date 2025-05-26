@@ -132,7 +132,7 @@ final class Bot {
 
       case 'b3fa0915': // Project Zomboid
         $game = 'Project Zomboid';
-        $server = '185.45.226.7#:' . $_['relationships']['allocations']['data'][0]['attributes']['port'];
+        $server = '185.45.226.7:' . $_['relationships']['allocations']['data'][0]['attributes']['port'];
         $password = 'daddyspiffo';
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/108600/header.jpg?t=1739309087';
         break;
