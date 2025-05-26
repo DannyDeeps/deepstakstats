@@ -10,10 +10,6 @@ use \Discord\Builders\MessageBuilder;
 use \GuzzleHttp\Client;
 
 final class Bot {
-  private string $serverCacheFile = CACHE_DIR . '/servers.json';
-  private array $serverCache = [];
-  private string $usageCacheFile = CACHE_DIR . '/usage.txt';
-  private string $usageMessageId = '';
   private string $infoMessageCacheFile = CACHE_DIR . '/infoMessage.txt';
   private string $infoMessageId = '';
   private Client $guzzle;
@@ -43,6 +39,16 @@ final class Bot {
     });
 
     $discord->run();
+  }
+
+  private function loadInfoMessageCache(): void {
+    if (file_exists($this->infoMessageCacheFile)) {
+      $this->infoMessageId = file_get_contents($this->infoMessageCacheFile) ?? '';
+    }
+  }
+
+  private function saveInfoMessageCache(): void {
+    file_put_contents($this->infoMessageCacheFile, $this->infoMessageId);
   }
 
   private function updateInfoMessage(Discord $discord, Channel $channel): void {
@@ -83,16 +89,6 @@ final class Bot {
         );
       }
     );
-  }
-
-  private function loadInfoMessageCache(): void {
-    if (file_exists($this->infoMessageCacheFile)) {
-      $this->infoMessageId = file_get_contents($this->infoMessageCacheFile) ?? '';
-    }
-  }
-
-  private function saveInfoMessageCache(): void {
-    file_put_contents($this->usageCacheFile, $this->usageMessageId);
   }
 
   private function buildServerInfo(Discord $discord, array $attributes): Embed {
@@ -136,7 +132,7 @@ final class Bot {
 
       case 'b3fa0915': // Project Zomboid
         $game = 'Project Zomboid';
-        $server = '185.45.226.7' . $_['relationships']['allocations']['data'][0]['attributes']['port'];
+        $server = '185.45.226.7#:' . $_['relationships']['allocations']['data'][0]['attributes']['port'];
         $password = 'daddyspiffo';
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/108600/header.jpg?t=1739309087';
         break;
