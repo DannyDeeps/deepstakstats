@@ -144,6 +144,13 @@ final class Bot {
         $password = 'iamproperty';
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/526870/header.jpg?t=1749627472';
         break;
+
+      case '0dfb3174': // Necesse
+        $game = 'Necesse';
+        $server = '185.45.226.7:14159';
+        $password = 'needyneeders';
+        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1169040/header.jpg?t=1749558478';
+        break;
     }
 
     $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
