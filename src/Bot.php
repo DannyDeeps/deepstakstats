@@ -61,6 +61,7 @@ final class Bot {
     $embed = new Embed($discord);
     $embed
       ->setTitle('Deepstak Overall Usage')
+      ->setDescription('Below is a list of servers availabe for everyone to play on, as well as their current status represented by the color of the left border. Feel free to ping @DannyDeeps to discuss adding any other game servers!')
       ->setColor(0x800080)
       ->addFieldValues('CPU', "```$cpuLoad%```", true)
       ->addFieldValues("RAM", "```{$memUsage['used_gb']}/{$memUsage['total_gb']} GB ({$memUsage['percent_used']}%)```", true)
