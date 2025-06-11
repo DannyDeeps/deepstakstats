@@ -136,6 +136,13 @@ final class Bot {
         $password = 'daddyspiffo';
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/108600/header.jpg?t=1739309087';
         break;
+
+      case '73b2174e': // Satisfactory
+        $game = 'Satisfactory';
+        $server = '185.45.226.7:7777';
+        $password = 'iamproperty';
+        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/526870/header.jpg?t=1749627472';
+        break;
     }
 
     $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
