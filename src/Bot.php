@@ -151,6 +151,13 @@ final class Bot {
         $password = 'needyneeders';
         $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1169040/header.jpg?t=1749558478';
         break;
+
+      case 'e54af4b0': // Palworld
+        $game = 'Palworld';
+        $server = '185.45.226.7:8211';
+        $password = 'novicefondlers';
+        $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1623730/058bd87dc17a7179e07c446aa64d0574ca43ab9d/header.jpg?t=1752129522';
+        break;
     }
 
     $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
@@ -161,7 +168,7 @@ final class Bot {
     $memGb = round($_['usage']['memory_bytes'] / 1073741824, 2);
     $memGbLimit = $_['limits']['memory'] ? round($_['limits']['memory'] / 1024, 2) . ' GB' : 'Unlimited';
 
-    $server = $server ?? "https://deepstak.uk:$port";
+    $server = $server ?? "deepstak.uk:$port";
     $password = $password ?? 'No Password';
 
     $statusColor = match ($_['current_state']) {
