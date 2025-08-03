@@ -158,6 +158,13 @@ final class Bot {
         $password = 'novicefondlers';
         $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1623730/058bd87dc17a7179e07c446aa64d0574ca43ab9d/header.jpg?t=1752129522';
         break;
+
+      case 'e54af4b0': // Palworld
+        $game = 'Abiotic Factor';
+        $server = '185.45.226.7:7777';
+        $password = 'gordanfreeman';
+        $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/427410/62bb338ff214d4fde1a07f0f768082832a8c2d0a/header.jpg?t=1753890309';
+        break;
     }
 
     $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
