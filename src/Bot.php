@@ -11,7 +11,9 @@ use \GuzzleHttp\Client;
 
 final class Bot {
   private string $infoMessageCacheFile = CACHE_DIR . '/infoMessage.txt';
+  private string $infoMessageTwoCacheFile = CACHE_DIR . '/infoMessageTwo.txt';
   private string $infoMessageId = '';
+  private string $infoMessageIdTwo = '';
   private Client $guzzle;
 
   public function start(): void {
@@ -45,10 +47,15 @@ final class Bot {
     if (file_exists($this->infoMessageCacheFile)) {
       $this->infoMessageId = file_get_contents($this->infoMessageCacheFile) ?? '';
     }
+
+    if (file_exists($this->infoMessageTwoCacheFile)) {
+      $this->infoMessageIdTwo = file_get_contents($this->infoMessageTwoCacheFile) ?? '';
+    }
   }
 
   private function saveInfoMessageCache(): void {
     file_put_contents($this->infoMessageCacheFile, $this->infoMessageId);
+    file_put_contents($this->infoMessageTwoCacheFile, $this->infoMessageIdTwo);
   }
 
   private function updateInfoMessage(Discord $discord, Channel $channel): void {
@@ -74,22 +81,30 @@ final class Bot {
       $embeds[] = $this->buildServerInfo($discord, $server['attributes']);
     }
 
-    $infoMessage = MessageBuilder::new();
-    $infoMessage->addEmbed(...$embeds);
+    $embedBatches = array_chunk($embeds, 10);
+    foreach ($embedBatches as $batchIndex => $embedBatch) {
+      $infoMessage = MessageBuilder::new();
+      $infoMessage->addEmbed(...$embedBatch);
+      $infoMessageId = $batchIndex ? $this->infoMessageIdTwo : $this->infoMessageId;
 
-    $channel->messages->fetch($this->infoMessageId)->then(
-      function (Message $message) use ($infoMessage) {
-        $message->edit($infoMessage);
-      },
-      function () use ($channel, $infoMessage) {
-        $channel->sendMessage($infoMessage)->then(
-          function (Message $message) {
-            $this->infoMessageId = $message->id;
-            $this->saveInfoMessageCache();
-          }
-        );
-      }
-    );
+      $channel->messages->fetch($infoMessageId)->then(
+        function (Message $message) use ($infoMessage) {
+          $message->edit($infoMessage);
+        },
+        function () use ($channel, $infoMessage, $batchIndex) {
+          $channel->sendMessage($infoMessage)->then(
+            function (Message $message) use ($batchIndex) {
+              if ($batchIndex) {
+                $this->infoMessageIdTwo = $message->id;
+              } else {
+                $this->infoMessageId = $message->id;
+              }
+              $this->saveInfoMessageCache();
+            }
+          );
+        }
+      );
+    }
   }
 
   private function buildServerInfo(Discord $discord, array $attributes): Embed {
@@ -159,7 +174,7 @@ final class Bot {
         $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1623730/058bd87dc17a7179e07c446aa64d0574ca43ab9d/header.jpg?t=1752129522';
         break;
 
-      case 'e54af4b0': // Palworld
+      case 'b82a353d': // Abiotic Factor
         $game = 'Abiotic Factor';
         $server = '185.45.226.7:7777';
         $password = 'gordanfreeman';
@@ -175,8 +190,8 @@ final class Bot {
     $memGb = round($_['usage']['memory_bytes'] / 1073741824, 2);
     $memGbLimit = $_['limits']['memory'] ? round($_['limits']['memory'] / 1024, 2) . ' GB' : 'Unlimited';
 
-    $server = $server ?? "deepstak.uk:$port";
-    $password = $password ?? 'No Password';
+    $server ??= "deepstak.uk:$port";
+    $password ??= 'No Password';
 
     $statusColor = match ($_['current_state']) {
       'running' => 0x00FF00,
