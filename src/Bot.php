@@ -180,6 +180,11 @@ final class Bot {
         $password = 'gordanfreeman';
         $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/427410/62bb338ff214d4fde1a07f0f768082832a8c2d0a/header.jpg?t=1753890309';
         break;
+
+      case 'a16cc392': // Minecraft Vanilla
+        $game = 'Minecraft';
+        $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3049290/header.jpg?t=1741834279';
+        break;
     }
 
     $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
