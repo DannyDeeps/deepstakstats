@@ -68,7 +68,7 @@ final class Bot {
     $embed = new Embed($discord);
     $embed
       ->setTitle('Deepstak Overall Usage')
-      ->setDescription('Below is a list of servers availabe for everyone to play on, as well as their current status represented by the color of the left border. Feel free to ping @DannyDeeps to discuss adding any other game servers!')
+      // ->setDescription('Below is a list of servers availabe for everyone to play on, as well as their current status represented by the color of the left border. Feel free to ping @DannyDeeps to discuss adding any other game servers!')
       ->setColor(0x800080)
       ->addFieldValues('CPU', "```$cpuLoad%```", true)
       ->addFieldValues("RAM", "```{$memUsage['used_gb']}/{$memUsage['total_gb']} GB ({$memUsage['percent_used']}%)```", true)
@@ -189,11 +189,11 @@ final class Bot {
 
     $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
 
-    $cpuPrcnt = number_format(round($_['usage']['cpu_absolute'] ?? 0, 2), 2);
-    $cpuLimit = $_['limits']['cpu'] ? $_['limits']['cpu'] . '%' : 'Unlimited';
+    // $cpuPrcnt = number_format(round($_['usage']['cpu_absolute'] ?? 0, 2), 2);
+    // $cpuLimit = $_['limits']['cpu'] ? $_['limits']['cpu'] . '%' : 'Unlimited';
 
-    $memGb = round($_['usage']['memory_bytes'] / 1073741824, 2);
-    $memGbLimit = $_['limits']['memory'] ? round($_['limits']['memory'] / 1024, 2) . ' GB' : 'Unlimited';
+    // $memGb = round($_['usage']['memory_bytes'] / 1073741824, 2);
+    // $memGbLimit = $_['limits']['memory'] ? round($_['limits']['memory'] / 1024, 2) . ' GB' : 'Unlimited';
 
     $server ??= "deepstak.uk:$port";
     $password ??= 'No Password';
@@ -214,13 +214,11 @@ final class Bot {
       ->setColor($statusColor)
       ->setDescription($_['description'])
       ->addFieldValues('Server', "```$server```", true)
-      ->addFieldValues('CPU', "```$cpuPrcnt/$cpuLimit```", true)
-      ->addFieldValues('', '', false)
-      ->addFieldValues('Password', "```$password```", true)
-      ->addFieldValues('RAM', "```$memGb/$memGbLimit```", true);
+      ->addFieldValues('Password', "```$password```", true);
 
     if (isset($image)) {
-      $embed->setImage($image);
+      $embed->setThumbnail($image);
+      // $embed->setImage($image);
     }
 
     return $embed;
