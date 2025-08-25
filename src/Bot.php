@@ -10,10 +10,8 @@ use \Discord\Builders\MessageBuilder;
 use \GuzzleHttp\Client;
 
 final class Bot {
-  private string $infoMessageCacheFile = CACHE_DIR . '/infoMessage.txt';
-  private string $infoMessageTwoCacheFile = CACHE_DIR . '/infoMessageTwo.txt';
-  private string $infoMessageId = '';
-  private string $infoMessageIdTwo = '';
+  private string $sessionCacheFile = CACHE_DIR . '/session.json';
+  private array $sessionCache = ['msgIds' => []];
   private Client $guzzle;
 
   public function start(): void {
@@ -30,7 +28,7 @@ final class Bot {
       if (!$channel) {
         $discord->getLogger()->error('[DeepstakStats] Channel not found.');
       } else {
-        $this->loadInfoMessageCache();
+        $this->loadSessionCache();
 
         $this->guzzle = new Client(['base_uri' => 'https://ptero.deepstak.uk']);
 
@@ -40,22 +38,19 @@ final class Bot {
       }
     });
 
+    echo 'Bot Starting';
     $discord->run();
+    echo 'Bot Stopped';
   }
 
-  private function loadInfoMessageCache(): void {
-    if (file_exists($this->infoMessageCacheFile)) {
-      $this->infoMessageId = file_get_contents($this->infoMessageCacheFile) ?? '';
-    }
-
-    if (file_exists($this->infoMessageTwoCacheFile)) {
-      $this->infoMessageIdTwo = file_get_contents($this->infoMessageTwoCacheFile) ?? '';
+  private function loadSessionCache(): void {
+    if (file_exists($this->sessionCacheFile)) {
+      $this->sessionCache = json_decode(file_get_contents($this->sessionCacheFile), true) ?? [];
     }
   }
 
-  private function saveInfoMessageCache(): void {
-    file_put_contents($this->infoMessageCacheFile, $this->infoMessageId);
-    file_put_contents($this->infoMessageTwoCacheFile, $this->infoMessageIdTwo);
+  private function saveSessionCache(): void {
+    file_put_contents($this->sessionCacheFile, json_encode($this->sessionCache));
   }
 
   private function updateInfoMessage(Discord $discord, Channel $channel): void {
@@ -68,7 +63,6 @@ final class Bot {
     $embed = new Embed($discord);
     $embed
       ->setTitle('Deepstak Overall Usage')
-      // ->setDescription('Below is a list of servers availabe for everyone to play on, as well as their current status represented by the color of the left border. Feel free to ping @DannyDeeps to discuss adding any other game servers!')
       ->setColor(0x800080)
       ->addFieldValues('CPU', "```$cpuLoad%```", true)
       ->addFieldValues("RAM", "```{$memUsage['used_gb']}/{$memUsage['total_gb']} GB ({$memUsage['percent_used']}%)```", true)
@@ -76,16 +70,25 @@ final class Bot {
 
     $embeds[] = $embed;
 
-    $servers = Stats::getServerList($this->guzzle, $discord->getLogger());
-    foreach ($servers as $server) {
-      $embeds[] = $this->buildServerInfo($discord, $server['attributes']);
+    $serverConfigs = $this->getServersConfig();
+    $serverAttributes = Stats::getServerAttributes($this->guzzle, $discord->getLogger());
+
+    $serverInfos = [];
+    foreach ($serverConfigs as $server => $config) {
+      $serverInfos[$server] = $this->buildServerInfo($config, $serverAttributes[$server] ?? []);
+    }
+
+    $serverInfos = $this->sortServersByStatus($serverInfos);
+
+    foreach ($serverInfos as $serverInfo) {
+      $embeds[] = $this->buildServerEmbed($discord, $serverInfo);
     }
 
     $embedBatches = array_chunk($embeds, 10);
     foreach ($embedBatches as $batchIndex => $embedBatch) {
       $infoMessage = MessageBuilder::new();
       $infoMessage->addEmbed(...$embedBatch);
-      $infoMessageId = $batchIndex ? $this->infoMessageIdTwo : $this->infoMessageId;
+      $infoMessageId = $this->sessionCache['msgIds'][$batchIndex] ?? '';
 
       $channel->messages->fetch($infoMessageId)->then(
         function (Message $message) use ($infoMessage) {
@@ -94,12 +97,8 @@ final class Bot {
         function () use ($channel, $infoMessage, $batchIndex) {
           $channel->sendMessage($infoMessage)->then(
             function (Message $message) use ($batchIndex) {
-              if ($batchIndex) {
-                $this->infoMessageIdTwo = $message->id;
-              } else {
-                $this->infoMessageId = $message->id;
-              }
-              $this->saveInfoMessageCache();
+              $this->sessionCache['msgIds'][$batchIndex] = $message->id;
+              $this->saveSessionCache();
             }
           );
         }
@@ -107,120 +106,72 @@ final class Bot {
     }
   }
 
-  private function buildServerInfo(Discord $discord, array $attributes): Embed {
-    $_ = $attributes;
+  private function buildServerInfo(array $config, array $attributes): array {
+    $serverInfo = [
+      'name' => $config['name'] ?? $attributes['name'] ?? '',
+      'game' => $config['game'],
+      'address' => $config['address'] ?? 'deepstak.uk:' . $attributes['relationships']['allocations']['data'][0]['attributes']['port'],
+      'password' => $config['password'] ?? '',
+      'description' => $config['description'] ?? $attributes['description'] ?? '',
+      'img' => $config['img'] ?? '',
+      'statusColor' => match ($attributes['status']) {
+        'running' => 0x00FF00,
+        'offline' => 0xFF0000,
+        'starting' => 0xFFFF00,
+        'reinstalling',
+        'installing' => 0xFFA500,
+        default => 0x808080
+      },
+    ];
 
-    switch ($_['identifier']) {
-      case 'e6e4eebe': // V Rising
-        $game = 'V Rising';
-        $password = $_['environment']['VR_PASSWORD'];
-        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1604030/123091b358ac705c36642df5599d230825ad3cd6/header.jpg?t=1745842815';
-        break;
+    $serverInfo = array_map(function(string|int $v) use ($attributes) {
+      if (is_string($v) && str_starts_with($v, 'env:')) {
+        return $attributes['environment'][substr($v, 4)];
+      }
 
-      case '1cee825e': // Enshrouded
-        $game = 'Enshrouded';
-        $password = $_['environment']['SRV_PW2'];
-        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1203620/header.jpg?t=1744617436';
-        break;
+      return $v;
+    }, $serverInfo);
 
-      case '4e8a47cd': // Valheim Plus
-        $game = 'Valheim Plus';
-        $password = $_['environment']['PASSWORD'];
-        $image = 'https://raw.githubusercontent.com/nxPublic/ValheimPlus/master/logo.png';
-        break;
+    return $serverInfo;
+  }
 
-      case '930f597e': // ATM10
-        $game = 'All The Mods 10 (Minecraft)';
-        $image = 'https://i.imgur.com/QAUei6a_d.webp?maxwidth=760&fidelity=grand';
-        break;
-
-      case 'a4e4837d': // Arma 3
-        $game = 'Arma 3';
-        $password = $_['environment']['SERVER_PASSWORD'];
-        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/107410/header.jpg?t=1743497752';
-        break;
-
-      case '745f58e7': // Core Keeper
-        $game = 'Core Keeper';
-        $server = $_['environment']['GAME_ID'];
-        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1621690/header.jpg?t=1741883937';
-        break;
-
-      case 'b3fa0915': // Project Zomboid
-        $game = 'Project Zomboid';
-        $server = '185.45.226.7:' . $_['relationships']['allocations']['data'][0]['attributes']['port'];
-        $password = 'daddyspiffo';
-        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/108600/header.jpg?t=1739309087';
-        break;
-
-      case '73b2174e': // Satisfactory
-        $game = 'Satisfactory';
-        $server = '185.45.226.7:7777';
-        $password = 'iamproperty';
-        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/526870/header.jpg?t=1749627472';
-        break;
-
-      case '0dfb3174': // Necesse
-        $game = 'Necesse';
-        $server = '185.45.226.7:14159';
-        $password = 'needyneeders';
-        $image = 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1169040/header.jpg?t=1749558478';
-        break;
-
-      case 'e54af4b0': // Palworld
-        $game = 'Palworld';
-        $server = '185.45.226.7:8211';
-        $password = 'novicefondlers';
-        $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1623730/058bd87dc17a7179e07c446aa64d0574ca43ab9d/header.jpg?t=1752129522';
-        break;
-
-      case 'b82a353d': // Abiotic Factor
-        $game = 'Abiotic Factor';
-        $server = '185.45.226.7:7777';
-        $password = 'gordanfreeman';
-        $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/427410/62bb338ff214d4fde1a07f0f768082832a8c2d0a/header.jpg?t=1753890309';
-        break;
-
-      case 'a16cc392': // Minecraft Vanilla
-        $game = 'Minecraft';
-        $image = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3049290/header.jpg?t=1741834279';
-        break;
-    }
-
-    $port = $_['relationships']['allocations']['data'][0]['attributes']['port'];
-
-    // $cpuPrcnt = number_format(round($_['usage']['cpu_absolute'] ?? 0, 2), 2);
-    // $cpuLimit = $_['limits']['cpu'] ? $_['limits']['cpu'] . '%' : 'Unlimited';
-
-    // $memGb = round($_['usage']['memory_bytes'] / 1073741824, 2);
-    // $memGbLimit = $_['limits']['memory'] ? round($_['limits']['memory'] / 1024, 2) . ' GB' : 'Unlimited';
-
-    $server ??= "deepstak.uk:$port";
-    $password ??= 'No Password';
-
-    $statusColor = match ($_['current_state']) {
-      'running' => 0x00FF00,
-      'offline' => 0xFF0000,
-      'starting' => 0xFFFF00,
-      'reinstalling',
-      'installing' => 0xFFA500,
-      default => 0x808080
-    };
-
+  private function buildServerEmbed(Discord $discord, array $serverInfo): Embed {
     $embed = new Embed($discord);
     $embed
-      ->setTitle($_['name'])
-      ->setAuthor($game ?? '')
-      ->setColor($statusColor)
-      ->setDescription($_['description'])
-      ->addFieldValues('Server', "```$server```", true)
-      ->addFieldValues('Password', "```$password```", true);
+      ->setTitle($serverInfo['name'])
+      ->setAuthor($serverInfo['game'])
+      ->setColor($serverInfo['statusColor'])
+      ->setDescription($serverInfo['description'])
+      ->addFieldValues('Address', "```{$serverInfo['address']}```", true);
 
-    if (isset($image)) {
-      $embed->setThumbnail($image);
-      // $embed->setImage($image);
+    if ($serverInfo['password']) {
+      $embed->addFieldValues('Password', "```{$serverInfo['password']}```", true);
+    }
+
+    if ($serverInfo['img']) {
+      $embed->setImage($serverInfo['img']);
     }
 
     return $embed;
+  }
+
+  private function sortServersByStatus(array $servers): array {
+    $order = [
+      0x00FF00 => 1, // running
+      0xFFFF00 => 2, // starting
+      0xFFA500 => 3, // installing/reinstalling
+      0xFF0000 => 4, // offline
+      0x808080 => 5, // unknown
+    ];
+
+    usort($servers, function($a, $b) use ($order) {
+      return ($order[$a['statusColor']] ?? 6) <=> ($order[$b['statusColor']] ?? 6);
+    });
+
+    return $servers;
+  }
+
+  private function getServersConfig(): array {
+    return require __DIR__ . '/../config/servers.php';
   }
 }
