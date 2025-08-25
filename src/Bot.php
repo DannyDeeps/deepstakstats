@@ -138,8 +138,8 @@ final class Bot {
   private function buildServerEmbed(Discord $discord, array $serverInfo): Embed {
     $embed = new Embed($discord);
     $embed
-      ->setTitle($serverInfo['name'])
-      ->setAuthor($serverInfo['game'])
+      ->setTitle("{$serverInfo['name']} ({$serverInfo['game']})")
+      // ->setAuthor($serverInfo['game'])
       ->setColor($serverInfo['statusColor'])
       ->setDescription($serverInfo['description'])
       ->addFieldValues('Address', "```{$serverInfo['address']}```", true);
