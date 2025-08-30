@@ -15,7 +15,7 @@ final class Stats {
       $response = $guzzle->get("/api/client/servers/{$server['attributes']['identifier']}/resources", ['headers' => ['Authorization' => 'Bearer ' . $_ENV['CLIENT_API_KEY']]]);
       $resourceData = json_decode((string) $response->getBody(), true);
       // $server['attributes']['usage'] = $resourceData['attributes']['resources'];
-      $server['attributes']['status'] = $resourceData['attributes']['current_state'];
+      $server['attributes']['status'] = $resourceData['attributes']['current_state'] ?? '';
       $servers[$server['attributes']['identifier']] = $server['attributes'];
     }
 
