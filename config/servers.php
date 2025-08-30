@@ -19,12 +19,6 @@
     'img' => 'https://i.imgur.com/QAUei6a_d.webp?maxwidth=760&fidelity=grand',
   ],
 
-  // ATM10 To The Sky | Minecraft (ATM10 To The Sky)
-  '231ab2a4' => [
-    'game' => 'Minecraft (ATM10 To The Sky)',
-    'img' => 'https://media.forgecdn.net/avatars/thumbnails/1389/739/64/64/638901033593272382.png',
-  ],
-
   // Vikings & Vixens | Valheim (Valheim+)
   '4e8a47cd' => [
     'game' => 'Valheim (Valheim+)',
@@ -99,4 +93,10 @@
   //   'game' => 'Minecraft (ATM10 To The Sky)',
   //   'img' => 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3049290/header.jpg?t=1741834279',
   // ],
+
+  // ATM10 To The Sky | Minecraft (ATM10 To The Sky)
+  '231ab2a4' => [
+    'game' => 'Minecraft (ATM10 To The Sky)',
+    'img' => 'https://i.imgur.com/VeEQ2N0.png',
+  ],
 ];
