@@ -104,7 +104,7 @@
   '84f886f6' => [
     'name' => 'Dino Kibblets Island',
     'game' => 'ARK: Survival Evolved',
-    'img' => 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/346110/header.jpg?t=1752704051',
+    'img' => 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1691800/header.jpg?t=1639509102',
     'password' => 'env:SERVER_PASSWORD',
   ],
 ];
