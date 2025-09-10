@@ -102,7 +102,9 @@
 
   // Dino Kibblets Island | ARK: Survival Evolved
   '84f886f6' => [
+    'name' => 'Dino Kibblets Island',
     'game' => 'ARK: Survival Evolved',
     'img' => 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/346110/header.jpg?t=1752704051',
+    'password' => 'env:SERVER_PASSWORD',
   ],
 ];
