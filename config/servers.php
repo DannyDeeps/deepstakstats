@@ -69,18 +69,19 @@
   ],
 
   // Axolotl's Oasis - Survival | Minecraft
-  // 'a16cc392' => [
-  //   'game' => 'Minecraft',
-  //   'img' => 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3049290/header.jpg?t=1741834279',
-  // ],
-
-  // Axolotl's Oasis - Proxy | Minecraft Proxy (Velocity)
-  '516943b7' => [
-    'name' => 'Axolotl\'s Oasis',
+  'a16cc392' => [
     'game' => 'Minecraft',
     'img' => 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3049290/header.jpg?t=1741834279',
     'address' => 'axolotlsoasis.deepstak.uk',
   ],
+
+  // Axolotl's Oasis - Proxy | Minecraft Proxy (Velocity)
+  // '516943b7' => [
+  //   'name' => 'Axolotl\'s Oasis',
+  //   'game' => 'Minecraft',
+  //   'img' => 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3049290/header.jpg?t=1741834279',
+  //   'address' => 'axolotlsoasis.deepstak.uk',
+  // ],
 
   // Axolotl's Oasis - Creative | Minecraft
   // 'bf1b2031' => [
@@ -101,10 +102,10 @@
   ],
 
   // Dino Kibblets Island | ARK: Survival Evolved
-  '84f886f6' => [
+  '8870f70e' => [
     'name' => 'Dino Kibblets Island',
     'game' => 'ARK: Survival Evolved',
     'img' => 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1691800/header.jpg?t=1639509102',
-    'password' => 'env:SERVER_PASSWORD',
+    'password' => 'env:ARK_PASSWORD',
   ],
 ];
