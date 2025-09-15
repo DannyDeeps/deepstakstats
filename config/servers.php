@@ -107,5 +107,6 @@
     'game' => 'ARK: Survival Evolved',
     'img' => 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1691800/header.jpg?t=1639509102',
     'password' => 'env:ARK_PASSWORD',
+    'addres' => '185.45.226.7:7777',
   ],
 ];
