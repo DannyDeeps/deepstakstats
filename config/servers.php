@@ -101,9 +101,9 @@
     'img' => 'https://i.imgur.com/VeEQ2N0.png',
   ],
 
-  // Dino Kibblets Island | ARK: Survival Evolved
+  // Dino Nuggie Island | ARK: Survival Evolved
   '8870f70e' => [
-    'name' => 'Dino Kibblets Island',
+    'name' => 'Dino Nuggie Island',
     'game' => 'ARK: Survival Evolved',
     'img' => 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1691800/header.jpg?t=1639509102',
     'password' => 'env:ARK_PASSWORD',
