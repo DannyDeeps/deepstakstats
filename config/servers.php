@@ -107,6 +107,19 @@
     'game' => 'ARK: Survival Evolved',
     'img' => 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1691800/header.jpg?t=1639509102',
     'password' => 'env:ARK_PASSWORD',
-    'addres' => '185.45.226.7:7777',
+    'address' => '185.45.226.7:7777',
   ],
+  '7f250c36' => [
+    'name' => 'Savage Elysium',
+    'game' => 'Conan Exiles',
+    'img' => 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/440900/header.jpg?t=1741979833',
+    'password' => 'env:SRV_PW',
+    'address' => '185.45.226.7:7777',
+  ],
+  'c8a1b6a0' => [
+    'name' => '7 Days to Darkness',
+    'game' => '7 Days To Die',
+    'img' => 'https://images.nexusmods.com/mod-headers/1059/235.jpg',
+    'address' => '185.45.226.7:26900',
+  ]
 ];

@@ -110,7 +110,7 @@ final class Bot {
     $serverInfo = [
       'name' => $config['name'] ?? $attributes['name'] ?? '',
       'game' => $config['game'],
-      'address' => $config['address'] ?? 'deepstak.uk:' . $attributes['relationships']['allocations']['data'][0]['attributes']['port'],
+      'address' => $config['address'] ?? '185.45.226.7:' . $attributes['relationships']['allocations']['data'][0]['attributes']['port'],
       'password' => $config['password'] ?? '',
       'description' => $config['description'] ?? $attributes['description'] ?? '',
       'img' => $config['img'] ?? '',
